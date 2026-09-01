@@ -5,11 +5,7 @@ import { getStore } from "@netlify/blobs";
 
 export const handler = async () => {
   try {
-    const store = getStore({
-      name: "order-dashboard",
-      siteID: process.env.NETLIFY_SITE_ID,
-      token: process.env.NETLIFY_AUTH_TOKEN,
-    });
+    const store = getStore("order-dashboard");
     const record = (await store.get("latest", { type: "json" })) || {
       updatedAt: null,
       sites: [],
