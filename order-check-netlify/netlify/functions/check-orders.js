@@ -94,7 +94,7 @@ async function sendMail(subject, text) {
   });
 }
 
-const handler = async () => {
+const checkOrders = async () => {
   const results = await Promise.all([fetchOhouOrders(), fetchTossOrders(), fetchAliOrders()]);
   const body = buildEmailBody(results);
   await sendMail(`[주문확인] ${today()}`, body);
@@ -102,4 +102,4 @@ const handler = async () => {
 };
 
 // 매일 UTC 06:00 = KST 15:00
-export const scheduledHandler = schedule("0 6 * * *", handler);
+export const handler = schedule("0 6 * * *", checkOrders);
