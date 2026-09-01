@@ -10,14 +10,6 @@
 
 import { getStore } from "@netlify/blobs";
 
-function orderStore() {
-  return getStore({
-    name: "order-dashboard",
-    siteID: process.env.NETLIFY_SITE_ID,
-    token: process.env.NETLIFY_AUTH_TOKEN,
-  });
-}
-
 export const handler = async (event) => {
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, body: "Method Not Allowed" };
@@ -42,7 +34,7 @@ export const handler = async (event) => {
   };
 
   try {
-    const store = orderStore();
+    const store = getStore("order-dashboard");
     await store.setJSON("latest", record);
   } catch (e) {
     return { statusCode: 500, body: JSON.stringify({ ok: false, error: String(e.message || e) }) };
