@@ -4,15 +4,30 @@
 import { getStore } from "@netlify/blobs";
 
 export const handler = async () => {
-  const store = getStore("order-dashboard");
-  const record = (await store.get("latest", { type: "json" })) || {
-    updatedAt: null,
-    sites: [],
-  };
+  try {
+    const store = getStore({
+      name: "order-dashboard",
+      siteID: process.env.NETLIFY_SITE_ID,
+      token: process.env.NETLIFY_AUTH_TOKEN,
+    });
+    const record = (await store.get("latest", { type: "json" })) || {
+      updatedAt: null,
+      sites: [],
+    };
 
-  return {
-    statusCode: 200,
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(record),
-  };
+    return {
+      statusCode: 200,
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+      },
+      body: JSON.stringify(record),
+    };
+  } catch (e) {
+    return {
+      statusCode: 500,
+      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+      body: JSON.stringify({ error: String(e.message || e) }),
+    };
+  }
 };
