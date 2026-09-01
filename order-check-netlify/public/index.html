@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>주문내역 대시보드</title>
+<style>
+  :root {
+    --ink: #16191F; --sub: #6B7280; --paper: #FAFAF8; --card: #FFFFFF;
+    --rule: #E4E2DB; --soft: #F1EFE9; --red: #C8102E; --leaf: #3F7A55;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: 'Pretendard','Apple SD Gothic Neo','Malgun Gothic',-apple-system,sans-serif;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 28px 18px; }
+  header {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    border-bottom: 2px solid var(--ink); padding-bottom: 14px; margin-bottom: 18px;
+  }
+  h1 { font-size: 22px; font-weight: 800; margin: 0; letter-spacing: -0.02em; }
+  .updated { font-size: 12px; color: var(--sub); }
+  .card {
+    background: var(--card); border: 1px solid var(--rule); border-radius: 6px;
+    overflow: hidden; margin-bottom: 14px;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { padding: 12px 14px; text-align: left; }
+  th { background: var(--soft); color: var(--sub); font-size: 12px; font-weight: 700; }
+  tr + tr td { border-top: 1px solid var(--soft); }
+  .count { font-family: 'SF Mono','Menlo','Consolas',monospace; font-weight: 800; font-size: 16px; }
+  .count.zero { color: var(--sub); font-weight: 600; }
+  .count.warn { color: var(--red); }
+  .status-fail { font-size: 11px; color: var(--red); }
+  .status-ok { font-size: 11px; color: var(--sub); }
+  .empty { padding: 40px; text-align: center; color: var(--sub); font-size: 14px; }
+  button {
+    font-family: inherit; font-weight: 700; font-size: 13px; padding: 7px 14px;
+    border-radius: 4px; border: 1px solid var(--ink); background: var(--ink); color: var(--paper);
+    cursor: pointer;
+  }
+  .total { font-size: 12px; color: var(--sub); padding: 10px 14px; border-top: 1px solid var(--soft); }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <div style="font-size:11px;letter-spacing:.14em;color:var(--sub);font-weight:700;">SOLID KOREA</div>
+        <h1>주문내역 대시보드</h1>
+      </div>
+      <div style="text-align:right;">
+        <div class="updated" id="updated">불러오는 중…</div>
+        <button onclick="load()" style="margin-top:6px;">새로고침</button>
+      </div>
+    </header>
+    <div class="card">
+      <table>
+        <thead>
+          <tr><th>사이트</th><th>신규 주문</th><th>상태</th></tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <div id="empty" class="empty" style="display:none;">아직 데이터가 없습니다. 로컬 스크립트를 한 번 실행해주세요.</div>
+      <div class="total" id="total"></div>
+    </div>
+  </div>
+
+<script>
+async function load() {
+  document.getElementById('updated').textContent = '불러오는 중…';
+  try {
+    const res = await fetch('/.netlify/functions/get-results');
+    const data = await res.json();
+    render(data);
+  } catch (e) {
+    document.getElementById('updated').textContent = '불러오기 실패';
+  }
+}
+
+function render(data) {
+  const rowsEl = document.getElementById('rows');
+  const emptyEl = document.getElementById('empty');
+  const totalEl = document.getElementById('total');
+  const updatedEl = document.getElementById('updated');
+
+  updatedEl.textContent = data.updatedAt
+    ? '업데이트: ' + new Date(data.updatedAt).toLocaleString('ko-KR')
+    : '데이터 없음';
+
+  if (!data.sites || !data.sites.length) {
+    rowsEl.innerHTML = '';
+    emptyEl.style.display = 'block';
+    totalEl.textContent = '';
+    return;
+  }
+  emptyEl.style.display = 'none';
+
+  let total = 0;
+  rowsEl.innerHTML = data.sites.map(s => {
+    const n = Number(s.count) || 0;
+    total += n;
+    const cls = s.status === 'fail' ? 'warn' : (n === 0 ? 'zero' : '');
+    const statusHtml = s.status === 'fail'
+      ? '<span class="status-fail">확인 실패' + (s.error ? ': ' + escapeHtml(s.error) : '') + '</span>'
+      : '<span class="status-ok">정상</span>';
+    return '<tr><td>' + escapeHtml(s.name) + '</td><td class="count ' + cls + '">' + n + '건</td><td>' + statusHtml + '</td></tr>';
+  }).join('');
+  totalEl.textContent = '총 ' + total + '건';
+}
+
+function escapeHtml(str) {
+  const d = document.createElement('div');
+  d.textContent = String(str ?? '');
+  return d.innerHTML;
+}
+
+load();
+</script>
+</body>
+</html>
