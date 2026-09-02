@@ -1,28 +1,17 @@
-// netlify/functions/save-results.js
+// netlify/functions/get-results.js
+//
+// save-results.js가 저장해둔 최신 결과를 조회합니다.
+// 연차 앱의 "주문현황" 탭이 이 주소를 호출해서 데이터를 받아갑니다.
+//
+// 요청 예시:
+//   GET /.netlify/functions/get-results
 
 import { getStore } from "@netlify/blobs";
 
 export const handler = async (event) => {
-  if (event.httpMethod !== "POST") {
+  if (event.httpMethod !== "GET") {
     return { statusCode: 405, body: "Method Not Allowed" };
   }
-
-  const apiKey = event.headers["x-api-key"];
-  if (!process.env.SAVE_API_KEY || apiKey !== process.env.SAVE_API_KEY) {
-    return { statusCode: 401, body: "Unauthorized" };
-  }
-
-  let payload;
-  try {
-    payload = JSON.parse(event.body || "{}");
-  } catch {
-    return { statusCode: 400, body: "Invalid JSON" };
-  }
-
-  const record = {
-    updatedAt: new Date().toISOString(),
-    sites: payload.sites || [],
-  };
 
   try {
     const store = getStore({
@@ -30,10 +19,26 @@ export const handler = async (event) => {
       siteID: process.env.BLOBS_SITE_ID,
       token: process.env.BLOBS_TOKEN,
     });
-    await store.setJSON("latest", record);
-  } catch (e) {
-    return { statusCode: 500, body: JSON.stringify({ ok: false, error: String(e.message || e) }) };
-  }
 
-  return { statusCode: 200, body: JSON.stringify({ ok: true }) };
+    const record = await store.get("latest", { type: "json" });
+
+    if (!record) {
+      return {
+        statusCode: 200,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ok: true, updatedAt: null, sites: [] }),
+      };
+    }
+
+    return {
+      statusCode: 200,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ok: true, ...record }),
+    };
+  } catch (e) {
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ ok: false, error: String(e.message || e) }),
+    };
+  }
 };
